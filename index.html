@@ -1,0 +1,1022 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Relational Matrix Analyzer — Social Network Interactions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0E1219; --panel:#161C26; --panel2:#1C2531; --raise:#222D3B;
+    --line:#2A3543; --line2:#34425380;
+    --chalk:#E9ECF1; --muted:#8C99AB; --faint:#5E6B7D;
+    --teal:#6BE3C9; --teal-dim:#6be3c92e;
+    --gold:#E7B53C; --gold-dim:#e7b53c26;
+    --rose:#F0746A; --rose-dim:#f0746a26;
+    --violet:#8B9DF0;
+    --r:14px; --rs:9px;
+    --shadow:0 18px 40px -18px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:
+      radial-gradient(1200px 700px at 78% -10%, #18222f 0%, transparent 60%),
+      radial-gradient(900px 600px at -5% 110%, #15212a 0%, transparent 55%),
+      var(--ink);
+    color:var(--chalk);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  .mono{font-family:"IBM Plex Mono",monospace}
+  button{font-family:inherit;color:inherit;cursor:pointer}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#2c3a4b;border-radius:20px;border:2px solid transparent;background-clip:padding-box}
+  ::-webkit-scrollbar-thumb:hover{background:#3a4b60;background-clip:padding-box}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    padding:16px 26px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#141b25,#10161f);
+    position:sticky;top:0;z-index:30;
+  }
+  .glyph{
+    width:46px;height:46px;border-radius:12px;flex:none;
+    background:
+      linear-gradient(135deg,#1d2734,#11171f);
+    border:1px solid var(--line);display:grid;place-items:center;
+    box-shadow:inset 0 1px 0 #ffffff10;
+  }
+  .glyph svg{display:block}
+  .brand h1{
+    font-family:"Fraunces",serif;font-weight:600;font-size:21px;margin:0;
+    letter-spacing:.2px;line-height:1.1;
+  }
+  .brand p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+  .brand .accentword{color:var(--teal)}
+  .meta{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .chip{
+    font-size:11px;color:var(--muted);padding:5px 11px;border:1px solid var(--line);
+    border-radius:999px;background:#121822;white-space:nowrap;
+  }
+  .chip b{color:var(--chalk);font-weight:600}
+
+  /* ---------- layout ---------- */
+  .app{display:grid;grid-template-columns:268px 1fr;min-height:calc(100vh - 79px)}
+  .rail{
+    border-right:1px solid var(--line);padding:18px 16px 40px;
+    background:#11171f;display:flex;flex-direction:column;gap:20px;
+    position:sticky;top:79px;align-self:start;max-height:calc(100vh - 79px);overflow:auto;
+  }
+  .content{padding:20px clamp(16px,2.4vw,30px) 50px;display:flex;flex-direction:column;gap:20px;min-width:0}
+  .workbench{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:20px}
+  .insights{display:grid;grid-template-columns:repeat(12,1fr);gap:20px}
+
+  /* ---------- rail controls ---------- */
+  .rail h3{
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 11px;font-weight:600;
+  }
+  .group{border-top:1px dashed var(--line2);padding-top:18px}
+  .group:first-of-type{border-top:0;padding-top:0}
+  .field{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+  .field label{font-size:13px;color:var(--muted)}
+  .seg{display:inline-flex;background:#0d131b;border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px}
+  .seg button{
+    border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:500;
+    padding:5px 11px;border-radius:6px;transition:.16s;
+  }
+  .seg button.on{background:var(--teal);color:#06231d}
+  .stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:#0d131b;overflow:hidden}
+  .stepper button{border:0;background:transparent;width:30px;height:30px;font-size:17px;color:var(--chalk);line-height:1}
+  .stepper button:hover{background:#1b2531;color:var(--teal)}
+  .stepper span{min-width:30px;text-align:center;font-size:13px;font-weight:600}
+  .btn{
+    width:100%;display:flex;align-items:center;gap:9px;justify-content:flex-start;
+    border:1px solid var(--line);background:#141b25;color:var(--chalk);
+    padding:9px 12px;border-radius:9px;font-size:13px;font-weight:500;transition:.16s;margin-bottom:8px;
+  }
+  .btn:hover{border-color:#3b4d63;background:#1a232f;transform:translateY(-1px)}
+  .btn svg{flex:none;opacity:.8}
+  .btn.primary{background:linear-gradient(180deg,#1d3a33,#15302a);border-color:#2c5b50;color:#bff3e7}
+  .btn.primary:hover{border-color:var(--teal)}
+  .btn.ghost{background:transparent}
+  select,input[type=text]{
+    width:100%;background:#0d131b;border:1px solid var(--line);color:var(--chalk);
+    border-radius:9px;padding:8px 10px;font-size:13px;font-family:inherit;
+  }
+  select:focus,input:focus,button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .pathline{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
+  .pathline b{color:var(--gold)}
+
+  /* ---------- panels ---------- */
+  .panel{
+    background:linear-gradient(180deg,#161d27,#131922);
+    border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+    display:flex;flex-direction:column;min-width:0;overflow:hidden;
+  }
+  .phead{
+    display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);
+  }
+  .phead .ttl{font-family:"Fraunces",serif;font-size:16px;font-weight:600}
+  .phead .sub{font-size:11.5px;color:var(--faint)}
+  .phead .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .toggle{display:inline-flex;background:#0d131b;border:1px solid var(--line);border-radius:8px;padding:3px;gap:3px}
+  .toggle button{border:0;background:transparent;color:var(--muted);font-size:11.5px;padding:4px 9px;border-radius:5px;font-weight:500}
+  .toggle button.on{background:var(--raise);color:var(--chalk)}
+  .icon-btn{
+    border:1px solid var(--line);background:#0d131b;color:var(--muted);
+    width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  }
+  .icon-btn:hover{color:var(--teal);border-color:#3b4d63}
+  .icon-btn.on{color:var(--gold);border-color:var(--gold)}
+  .pbody{padding:16px;flex:1;min-height:0}
+
+  /* ---------- matrix ---------- */
+  .matrix-wrap{overflow:auto;max-height:430px}
+  table.mx{border-collapse:separate;border-spacing:4px;margin:0 auto}
+  table.mx th,table.mx td{padding:0}
+  .corner{width:34px}
+  .hdr{
+    min-width:34px;height:30px;color:var(--muted);font-size:11.5px;font-weight:600;
+    text-align:center;font-family:"IBM Plex Mono",monospace;white-space:nowrap;
+    padding:0 6px;border-radius:6px;outline:none;cursor:text;
+  }
+  .hdr:hover{background:#1a2330;color:var(--chalk)}
+  .hdr.row{text-align:right;padding-right:8px}
+  .hdr.hot{color:var(--teal);background:var(--teal-dim)}
+  .cell{
+    width:34px;height:34px;border-radius:7px;border:1px solid var(--line);
+    background:#10161f;color:var(--faint);font-family:"IBM Plex Mono",monospace;
+    font-size:13px;font-weight:600;display:grid;place-items:center;transition:.12s;
+  }
+  .cell:hover{transform:scale(1.07);border-color:#3b4d63;z-index:2}
+  .cell.on{background:var(--teal);color:#06231d;border-color:#7af0d8;box-shadow:0 0 0 1px #7af0d8aa,0 4px 12px -4px var(--teal)}
+  .cell.diag{border-style:dashed;border-color:#3a4556}
+  .cell.diag.on{background:var(--gold);color:#241901;border-color:#ffd368;box-shadow:0 0 0 1px #ffd368aa,0 4px 12px -4px var(--gold)}
+  .cell.rowhot{outline:2px solid var(--teal);outline-offset:-1px}
+  .cell.colhot{outline:2px solid var(--teal);outline-offset:-1px}
+  .cell.closure{border-color:var(--gold);box-shadow:inset 0 0 0 2px var(--gold-dim)}
+  .cell.closure::after{content:"";position:absolute}
+  .cell.heat{cursor:default}
+  td.cellwrap{position:relative}
+  .leg{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:11.5px;color:var(--muted)}
+  .leg span{display:inline-flex;align-items:center;gap:7px}
+  .sw{width:13px;height:13px;border-radius:4px;flex:none}
+
+  /* ---------- graph ---------- */
+  .graph-panel .pbody{padding:0;position:relative;background:
+     radial-gradient(700px 420px at 50% 42%, #18222e 0%, #0f151d 70%);}
+  #graph{display:block;width:100%;height:460px;touch-action:none}
+  .ghint{position:absolute;left:14px;bottom:12px;font-size:11px;color:var(--faint);pointer-events:none}
+  .gctl{position:absolute;right:12px;top:12px;display:flex;gap:7px}
+
+  /* ---------- insight cards ---------- */
+  .card{
+    background:linear-gradient(180deg,#161d27,#131922);border:1px solid var(--line);
+    border-radius:var(--r);padding:16px;box-shadow:var(--shadow);
+  }
+  .card h4{
+    margin:0 0 13px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;display:flex;align-items:center;gap:8px;
+  }
+  .span4{grid-column:span 4}
+  .span5{grid-column:span 5}
+  .span3{grid-column:span 3}
+  .span7{grid-column:span 7}
+  .span6{grid-column:span 6}
+  .span12{grid-column:span 12}
+
+  .prop{display:flex;align-items:flex-start;gap:11px;padding:10px 0;border-top:1px solid var(--line2)}
+  .prop:first-of-type{border-top:0;padding-top:2px}
+  .badge{
+    flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;margin-top:1px;
+    font-weight:700;font-size:13px;
+  }
+  .badge.yes{background:var(--teal-dim);color:var(--teal);box-shadow:inset 0 0 0 1px #6be3c955}
+  .badge.no{background:var(--rose-dim);color:var(--rose);box-shadow:inset 0 0 0 1px #f0746a55}
+  .prop .pn{font-size:13.5px;font-weight:600}
+  .prop .pf{font-size:11.5px;color:var(--muted);font-family:"IBM Plex Mono",monospace;margin-top:1px}
+  .prop .pv{font-size:11.5px;color:var(--rose);margin-top:3px}
+  .prop .pv.ok{color:var(--teal)}
+
+  .equiv{
+    margin-top:14px;padding:11px 13px;border-radius:10px;font-size:12.5px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .equiv.is{background:var(--teal-dim);color:#bff3e7;box-shadow:inset 0 0 0 1px #6be3c944}
+  .equiv.not{background:#1a212c;color:var(--muted);box-shadow:inset 0 0 0 1px var(--line)}
+
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .stat{background:#0f151d;border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+  .stat .v{font-size:23px;font-weight:600;font-family:"IBM Plex Mono",monospace;letter-spacing:-.5px}
+  .stat .v.teal{color:var(--teal)} .stat .v.gold{color:var(--gold)} .stat .v.rose{color:var(--rose)}
+  .stat .k{font-size:11px;color:var(--muted);margin-top:2px}
+
+  .deglist{display:flex;flex-direction:column;gap:7px;margin-top:2px;max-height:220px;overflow:auto}
+  .degrow{display:grid;grid-template-columns:84px 1fr auto;align-items:center;gap:10px;font-size:12.5px}
+  .degrow .nm{font-family:"IBM Plex Mono",monospace;color:var(--chalk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar{height:8px;border-radius:5px;background:#0d131b;overflow:hidden;border:1px solid var(--line)}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#2f6f63,var(--teal));border-radius:5px}
+  .degrow .dv{font-family:"IBM Plex Mono",monospace;color:var(--muted);font-size:11.5px;min-width:62px;text-align:right}
+
+  .cl-list{display:flex;flex-direction:column;gap:9px}
+  .cl{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#0f151d;font-size:12.5px}
+  .cl .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .cl .mem{color:var(--muted);font-family:"IBM Plex Mono",monospace;font-size:11.5px}
+  .empty{font-size:12px;color:var(--faint);font-style:italic}
+
+  .foot{padding:22px 26px;border-top:1px solid var(--line);color:var(--faint);font-size:11.5px;display:flex;gap:18px;flex-wrap:wrap;justify-content:space-between}
+  .foot .mono{color:var(--muted)}
+
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:#1c2531;border:1px solid var(--line);color:var(--chalk);padding:10px 16px;
+    border-radius:10px;font-size:12.5px;box-shadow:var(--shadow);opacity:0;pointer-events:none;
+    transition:.25s;z-index:60;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast b{color:var(--teal)}
+
+  @media (max-width:1080px){
+    .workbench{grid-template-columns:1fr}
+    .span4,.span5,.span3,.span7,.span6{grid-column:span 12}
+  }
+  @media (max-width:820px){
+    .app{grid-template-columns:1fr}
+    .rail{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}
+    .meta{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="glyph" aria-hidden="true">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+      <circle cx="6" cy="6" r="3" fill="#6BE3C9"/><circle cx="20" cy="7" r="3" fill="#E7B53C"/>
+      <circle cx="13" cy="20" r="3" fill="#8B9DF0"/>
+      <path d="M6 6L20 7M6 6L13 20M20 7L13 20" stroke="#4a5a6e" stroke-width="1.4"/>
+    </svg>
+  </div>
+  <div class="brand">
+    <h1>Relational Matrix Analyzer</h1>
+    <p>Discrete-mathematics analysis of <span class="accentword">social-network interactions</span> — relations, properties &amp; graph structure</p>
+  </div>
+  <div class="meta">
+    <span class="chip">UBA0401 · <b>Discrete Maths for AI</b></span>
+    <span class="chip">Capstone · <b>Team 1</b></span>
+    <span class="chip">B.Tech <b>AIML</b></span>
+  </div>
+</header>
+
+<div class="app">
+  <!-- ================= RAIL ================= -->
+  <aside class="rail">
+    <div class="group">
+      <h3>Relation model</h3>
+      <div class="field">
+        <label>Edge type</label>
+        <div class="seg" id="dirSeg">
+          <button data-dir="undirected" class="on">Undirected</button>
+          <button data-dir="directed">Directed</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Users (n)</label>
+        <div class="stepper">
+          <button id="dec" aria-label="Remove user">−</button>
+          <span id="ncount" class="mono">6</span>
+          <button id="inc" aria-label="Add user">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Sample networks</h3>
+      <select id="sample">
+        <option value="">Load a dataset…</option>
+        <option value="friends">Friend circle (symmetric)</option>
+        <option value="followers">Follower graph (directed)</option>
+        <option value="study">Study group (transitive)</option>
+        <option value="equiv">Equivalence (3 cliques)</option>
+        <option value="islands">Two communities + loner</option>
+      </select>
+      <div style="height:9px"></div>
+      <button class="btn" id="randomBtn"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 4h4l8 8h0M14 12v0M2 12h4l8-8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Random network</button>
+      <button class="btn ghost" id="clearBtn"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 5h10M6.5 5V3.5h3V5M5 5l.5 8h5l.5-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Clear matrix</button>
+    </div>
+
+    <div class="group">
+      <h3>Path finder · BFS</h3>
+      <div class="row2">
+        <select id="pSrc" aria-label="Source user"></select>
+        <select id="pDst" aria-label="Target user"></select>
+      </div>
+      <div style="height:9px"></div>
+      <button class="btn primary" id="pathBtn"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 13L13 3M13 3H8M13 3v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Trace shortest path</button>
+      <div class="pathline mono" id="pathOut"></div>
+    </div>
+
+    <div class="group">
+      <h3>Export &amp; import</h3>
+      <button class="btn" id="expJson"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Save project (.json)</button>
+      <button class="btn" id="expCsv"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 2h7l3 3v9H3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 8h6M5 11h6M5 5h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Export matrix (.csv)</button>
+      <button class="btn" id="expPng"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="6" cy="6.5" r="1" fill="currentColor"/><path d="M3 11l3-2.5 2.5 2 2-1.5L13 11" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Save graph (.png)</button>
+      <button class="btn ghost" id="impBtn"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 11V3M5 6l3-3 3 3M3 13h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Import .json</button>
+      <input type="file" id="impFile" accept="application/json,.json" style="display:none">
+    </div>
+  </aside>
+
+  <!-- ================= CONTENT ================= -->
+  <div class="content">
+    <section class="workbench">
+      <!-- MATRIX -->
+      <div class="panel">
+        <div class="phead">
+          <div>
+            <div class="ttl">Relation matrix <span class="mono" style="color:var(--faint);font-size:13px">R</span></div>
+            <div class="sub" id="mxSub">Click a cell to toggle a connection · double-click a label to rename</div>
+          </div>
+          <div class="right">
+            <div class="toggle" id="viewToggle">
+              <button data-view="matrix" class="on">Matrix</button>
+              <button data-view="heat">Heatmap</button>
+            </div>
+            <button class="icon-btn" id="closureBtn" title="Overlay transitive closure (Warshall)">R*</button>
+          </div>
+        </div>
+        <div class="pbody">
+          <div class="matrix-wrap"><div id="matrixHost"></div></div>
+          <div class="leg" id="legend">
+            <span><span class="sw" style="background:var(--teal)"></span>Connection (1)</span>
+            <span><span class="sw" style="background:#10161f;border:1px solid var(--line)"></span>None (0)</span>
+            <span><span class="sw" style="background:var(--gold)"></span>Self-relation (diagonal)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRAPH -->
+      <div class="panel graph-panel">
+        <div class="phead">
+          <div>
+            <div class="ttl">Network graph</div>
+            <div class="sub">Force-directed · drag nodes · size = degree · colour = community</div>
+          </div>
+          <div class="right">
+            <button class="icon-btn on" id="freezeBtn" title="Freeze / resume layout">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1v14M1 8h14M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="icon-btn" id="recenterBtn" title="Re-centre layout">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="pbody">
+          <canvas id="graph"></canvas>
+          <div class="gctl"></div>
+          <div class="ghint">Hover a node to spotlight its connections</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INSIGHTS -->
+    <section class="insights">
+      <div class="card span5">
+        <h4>Relation properties</h4>
+        <div id="props"></div>
+        <div class="equiv not" id="equivBox"></div>
+      </div>
+
+      <div class="card span3">
+        <h4>Network metrics</h4>
+        <div class="stats" id="stats"></div>
+      </div>
+
+      <div class="card span4">
+        <h4>Connection degree</h4>
+        <div class="deglist" id="degList"></div>
+      </div>
+
+      <div class="card span12">
+        <h4>Communities &amp; structure <span class="mono" style="color:var(--faint);font-weight:400;letter-spacing:0;font-size:11px;text-transform:none">— connected components via BFS</span></h4>
+        <div class="cl-list" id="clusters"></div>
+      </div>
+    </section>
+
+    <div class="foot">
+      <span>Built on discrete-mathematics relation theory — reflexive · symmetric · transitive · closure (Warshall) · BFS traversal.</span>
+      <span class="mono">Relational Matrix Analyzer · Team 1</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   STATE
+============================================================ */
+const CL_COLORS = ["#6BE3C9","#E7B53C","#F0746A","#8B9DF0","#5FC9F0","#C98BF0","#8FE06A","#F0A86A"];
+const LS_KEY = "rma_state_v1";
+
+let state = {
+  n: 6,
+  directed: false,
+  names: [],
+  M: [],          // n×n 0/1
+};
+let view = "matrix";        // matrix | heat
+let showClosure = false;
+let hoverNode = -1;
+let hoverCell = null;       // {i,j}
+let pathEdges = new Set();  // "i-j" keys highlighted from path finder
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const host = $("#matrixHost");
+
+function defaultNames(n){ return Array.from({length:n},(_,i)=>"U"+(i+1)); }
+function zeros(n){ return Array.from({length:n},()=>Array(n).fill(0)); }
+
+function ensureSize(n){
+  const M = zeros(n);
+  for(let i=0;i<Math.min(n,state.M.length);i++)
+    for(let j=0;j<Math.min(n,state.M.length);j++) M[i][j]=state.M[i][j]||0;
+  state.M = M;
+  const names = defaultNames(n);
+  for(let i=0;i<Math.min(n,state.names.length);i++) if(state.names[i]) names[i]=state.names[i];
+  state.names = names;
+  state.n = n;
+}
+
+/* ============================================================
+   MATRIX MATH
+============================================================ */
+function reflexive(M){ const v=[]; for(let i=0;i<M.length;i++) if(M[i][i]!==1) v.push(i); return {ok:v.length===0, viol:v}; }
+function irreflexive(M){ const v=[]; for(let i=0;i<M.length;i++) if(M[i][i]!==0) v.push(i); return {ok:v.length===0, viol:v}; }
+function symmetric(M){ const v=[]; for(let i=0;i<M.length;i++) for(let j=i+1;j<M.length;j++) if(M[i][j]!==M[j][i]) v.push([i,j]); return {ok:v.length===0, viol:v}; }
+function antisymmetric(M){ const v=[]; for(let i=0;i<M.length;i++) for(let j=i+1;j<M.length;j++) if(M[i][j]===1&&M[j][i]===1) v.push([i,j]); return {ok:v.length===0, viol:v}; }
+function transitive(M){
+  const n=M.length, v=[];
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){ if(!M[i][j])continue;
+    for(let k=0;k<n;k++){ if(M[j][k]&&!M[i][k]) v.push([i,k]); } }
+  return {ok:v.length===0, viol:v};
+}
+function warshall(M){
+  const n=M.length, R=M.map(r=>r.slice());
+  for(let k=0;k<n;k++)for(let i=0;i<n;i++)for(let j=0;j<n;j++)
+    if(R[i][k]&&R[k][j]) R[i][j]=1;
+  return R;
+}
+function components(M){           // undirected connectivity (i~j if edge either way)
+  const n=M.length, comp=Array(n).fill(-1); let c=0;
+  for(let s=0;s<n;s++){ if(comp[s]!==-1)continue;
+    comp[s]=c; const q=[s];
+    while(q.length){ const u=q.pop();
+      for(let w=0;w<n;w++) if(w!==u && comp[w]===-1 && (M[u][w]||M[w][u])){ comp[w]=c; q.push(w);} }
+    c++; }
+  return {comp, count:c};
+}
+function bfsPath(M,s,t,directed){
+  const n=M.length, prev=Array(n).fill(-2); prev[s]=-1; const q=[s];
+  while(q.length){ const u=q.shift(); if(u===t)break;
+    for(let w=0;w<n;w++){ const edge = directed ? M[u][w] : (M[u][w]||M[w][u]);
+      if(edge && prev[w]===-2){ prev[w]=u; q.push(w);} } }
+  if(prev[t]===-2) return null;
+  const path=[]; let cur=t; while(cur!==-1){ path.unshift(cur); cur=prev[cur]; }
+  return path;
+}
+function degrees(M,directed){
+  const n=M.length, out=Array(n).fill(0), inn=Array(n).fill(0);
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){ if(i===j)continue;
+    if(M[i][j]){ out[i]++; inn[j]++; } }
+  const deg = directed ? out.map((o,i)=>o+inn[i]) : out.slice();
+  return {out, inn, deg};
+}
+
+/* ============================================================
+   RENDER: MATRIX
+============================================================ */
+function renderMatrix(){
+  const {n,M,names,directed}=state;
+  const closure = showClosure ? warshall(M) : null;
+  const {deg} = degrees(M,directed);
+  const maxDeg = Math.max(1,...deg);
+
+  const tbl=document.createElement("table"); tbl.className="mx";
+  const thead=document.createElement("tr");
+  thead.appendChild(cellEl("th","corner"));
+  for(let j=0;j<n;j++){
+    const th=document.createElement("th");
+    const h=document.createElement("div");
+    h.className="hdr"; h.textContent=names[j]; h.dataset.idx=j; h.contentEditable="true"; h.spellcheck=false;
+    if(hoverNode===j) h.classList.add("hot");
+    bindHeader(h,j);
+    th.appendChild(h); thead.appendChild(th);
+  }
+  tbl.appendChild(thead);
+
+  for(let i=0;i<n;i++){
+    const tr=document.createElement("tr");
+    const rh=document.createElement("div");
+    rh.className="hdr row"; rh.textContent=names[i]; rh.dataset.idx=i; rh.contentEditable="true"; rh.spellcheck=false;
+    if(hoverNode===i) rh.classList.add("hot");
+    bindHeader(rh,i);
+    const rhTd=document.createElement("td"); rhTd.appendChild(rh); tr.appendChild(rhTd);
+
+    for(let j=0;j<n;j++){
+      const td=document.createElement("td"); td.className="cellwrap";
+      const c=document.createElement("button");
+      c.className="cell"+(i===j?" diag":"");
+      const on = M[i][j]===1;
+      if(view==="heat"){
+        c.classList.add("heat");
+        if(on){
+          const t=(deg[i]+deg[j])/(2*maxDeg);            // strength by endpoint degree
+          const col = i===j ? heatGold(t) : heatTeal(t);
+          c.style.background=col.bg; c.style.borderColor=col.bd; c.style.color=col.fg;
+          c.textContent="1";
+        } else { c.textContent=""; c.style.color="var(--faint)"; }
+      } else {
+        if(on) c.classList.add("on");
+        c.textContent = on ? "1" : "0";
+      }
+      if(showClosure && closure[i][j]===1 && M[i][j]!==1) c.classList.add("closure");
+      if(hoverNode===i) c.classList.add("rowhot");
+      if(hoverNode===j) c.classList.add("colhot");
+      c.dataset.i=i; c.dataset.j=j;
+      bindCell(c,i,j);
+      td.appendChild(c); tr.appendChild(td);
+    }
+    tbl.appendChild(tr);
+  }
+  host.innerHTML=""; host.appendChild(tbl);
+
+  // legend swap for heat view
+  const leg=$("#legend");
+  if(view==="heat"){
+    leg.innerHTML='<span><span class="sw" style="background:linear-gradient(90deg,#1d3b36,#6BE3C9)"></span>Tie strength (by combined degree)</span>'+
+                  '<span><span class="sw" style="background:var(--gold)"></span>Self-relation</span>'+
+                  (showClosure?'<span><span class="sw" style="background:#10161f;box-shadow:inset 0 0 0 2px var(--gold-dim);border:1px solid var(--gold)"></span>Indirect link (closure)</span>':'');
+  } else {
+    leg.innerHTML='<span><span class="sw" style="background:var(--teal)"></span>Connection (1)</span>'+
+                  '<span><span class="sw" style="background:#10161f;border:1px solid var(--line)"></span>None (0)</span>'+
+                  '<span><span class="sw" style="background:var(--gold)"></span>Self-relation</span>'+
+                  (showClosure?'<span><span class="sw" style="background:#10161f;box-shadow:inset 0 0 0 2px var(--gold-dim);border:1px solid var(--gold)"></span>Indirect link (closure)</span>':'');
+  }
+}
+function cellEl(tag,cls){ const e=document.createElement(tag); e.className=cls; return e; }
+function heatTeal(t){ const a=Math.max(.18,t); return {bg:`rgba(107,227,201,${.22+a*.78})`,bd:"#7af0d8",fg:t>.5?"#06231d":"#bff3e7"}; }
+function heatGold(t){ const a=Math.max(.18,t); return {bg:`rgba(231,181,60,${.22+a*.78})`,bd:"#ffd368",fg:"#241901"}; }
+
+function bindCell(c,i,j){
+  c.addEventListener("click",()=>{
+    if(view==="heat") return;          // heatmap read-only
+    state.M[i][j]^=1;
+    if(!state.directed) state.M[j][i]=state.M[i][j];   // keep symmetry
+    save(); refresh();
+  });
+  c.addEventListener("mouseenter",()=>{ hoverCell={i,j}; sim.wake(); });
+  c.addEventListener("mouseleave",()=>{ hoverCell=null; });
+}
+function bindHeader(h,idx){
+  let composing=false;
+  h.addEventListener("focus",()=>{ const r=document.createRange(); r.selectNodeContents(h); const s=getSelection(); s.removeAllRanges(); s.addRange(r); });
+  h.addEventListener("input",()=>{ if(!composing){ state.names[idx]=h.textContent.slice(0,10); } });
+  h.addEventListener("blur",()=>{ let t=(h.textContent||"").trim().slice(0,10)||("U"+(idx+1)); state.names[idx]=t; h.textContent=t; save(); refreshLight(); });
+  h.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); h.blur(); } });
+  h.addEventListener("mouseenter",()=>{ hoverNode=idx; sim.wake(); markHover(); });
+  h.addEventListener("mouseleave",()=>{ hoverNode=-1; markHover(); });
+}
+
+/* ============================================================
+   RENDER: INSIGHTS
+============================================================ */
+function nm(i){ return state.names[i]||("U"+(i+1)); }
+
+function renderProps(){
+  const M=state.M, dir=state.directed;
+  const R=reflexive(M), IR=irreflexive(M), S=symmetric(M), AS=antisymmetric(M), T=transitive(M);
+  const items=[
+    propRow("Reflexive", "∀i · R[i][i] = 1", R, R.ok?"every user relates to themselves":violUsers(R.viol)+" lack a self-loop"),
+    propRow("Irreflexive","∀i · R[i][i] = 0", IR, IR.ok?"no user relates to themselves":violUsers(IR.viol)+" have a self-loop"),
+    propRow(dir?"Symmetric":"Symmetric (mutual)","R[i][j] = R[j][i]", S, S.ok?"all ties are mutual":violPairs(S.viol)+" are one-way"),
+    propRow("Antisymmetric","¬(R[i][j] ∧ R[j][i]), i≠j", AS, AS.ok?"no two-way ties between distinct users":violPairs(AS.viol)+" are mutual"),
+    propRow("Transitive","R[i][j] ∧ R[j][k] ⟹ R[i][k]", T, T.ok?"all indirect links are already direct":(T.viol.length)+" implied link"+(T.viol.length>1?"s are":" is")+" missing"),
+  ];
+  $("#props").innerHTML=items.join("");
+
+  const eq = R.ok&&S.ok&&T.ok;
+  const po = R.ok&&AS.ok&&T.ok;
+  const box=$("#equivBox");
+  if(eq){ box.className="equiv is"; box.innerHTML='◆ This relation is an <b style="margin:0 4px">equivalence relation</b> — it partitions users into clusters.'; }
+  else if(po){ box.className="equiv is"; box.innerHTML='◆ This relation is a <b style="margin:0 4px">partial order</b> (reflexive · antisymmetric · transitive).'; }
+  else { box.className="equiv not"; box.innerHTML='○ Not an equivalence relation or partial order yet — adjust ties to satisfy reflexive + symmetric + transitive.'; }
+}
+function propRow(name,formula,res,detail){
+  const yes=res.ok;
+  return `<div class="prop">
+    <div class="badge ${yes?'yes':'no'}">${yes?'✓':'✕'}</div>
+    <div><div class="pn">${name}</div><div class="pf">${formula}</div>
+    <div class="pv ${yes?'ok':''}">${detail}</div></div></div>`;
+}
+function violUsers(v){ return v.slice(0,4).map(nm).join(", ")+(v.length>4?` +${v.length-4}`:""); }
+function violPairs(v){ return v.slice(0,3).map(p=>nm(p[0])+"↔"+nm(p[1])).join(", ")+(v.length>3?` +${v.length-3}`:""); }
+
+function renderStats(){
+  const {M,directed,n}=state;
+  let edges=0,self=0,mutual=0;
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){ if(M[i][j]){ if(i===j) self++; else edges++; } }
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++) if(M[i][j]&&M[j][i]) mutual++;
+  const undirectedEdges = directed ? edges : edges/2;
+  const possible = directed ? n*(n-1) : n*(n-1)/2;
+  const density = possible? (directed?edges:undirectedEdges)/possible : 0;
+  const {deg}=degrees(M,directed);
+  const iso=deg.filter(d=>d===0).length;
+  const comp=components(M);
+  const topIdx = deg.indexOf(Math.max(...deg,0));
+  const top = (Math.max(...deg,0)>0)? nm(topIdx) : "—";
+
+  const cells=[
+    ["users", n, ""],
+    ["relations", directed?edges:undirectedEdges, "teal"],
+    ["density", density.toFixed(2), ""],
+    ["communities", comp.count, "gold"],
+    ["mutual ties", mutual, ""],
+    ["isolated", iso, iso?"rose":""],
+    ["self-loops", self, ""],
+    ["hub", top, "teal"],
+  ];
+  $("#stats").innerHTML = cells.map(([k,v,c])=>
+    `<div class="stat"><div class="v ${c}">${v}</div><div class="k">${k}</div></div>`).join("");
+}
+
+function renderDegrees(){
+  const {M,directed,n}=state;
+  const {deg,out,inn}=degrees(M,directed);
+  const max=Math.max(1,...deg);
+  const order=[...Array(n).keys()].sort((a,b)=>deg[b]-deg[a]);
+  $("#degList").innerHTML = order.map(i=>{
+    const w=Math.round(deg[i]/max*100);
+    const detail = directed ? `${out[i]}→ ${inn[i]}←` : `${deg[i]} tie${deg[i]!==1?"s":""}`;
+    return `<div class="degrow"><div class="nm" title="${nm(i)}">${nm(i)}</div>
+      <div class="bar"><i style="width:${w}%"></i></div>
+      <div class="dv">${detail}</div></div>`;
+  }).join("");
+}
+
+function renderClusters(){
+  const {M,n}=state;
+  const {comp,count}=components(M);
+  const groups=Array.from({length:count},()=>[]);
+  for(let i=0;i<n;i++) groups[comp[i]].push(i);
+  groups.sort((a,b)=>b.length-a.length);
+  const host=$("#clusters");
+  if(count===0){ host.innerHTML='<div class="empty">No users.</div>'; return; }
+  host.innerHTML = groups.map((g,gi)=>{
+    const col=CL_COLORS[gi%CL_COLORS.length];
+    const label = g.length===1 ? "Isolated user" : `Community ${gi+1} · ${g.length} users`;
+    return `<div class="cl"><span class="dot" style="background:${col}"></span>
+      <b style="font-size:12.5px">${label}</b>
+      <span class="mem">${g.map(nm).join(" · ")}</span></div>`;
+  }).join("");
+}
+
+/* ============================================================
+   FORCE-DIRECTED GRAPH
+============================================================ */
+const canvas=$("#graph"), ctx=canvas.getContext("2d");
+let nodes=[], W=0, H=0, DPR=Math.min(2,window.devicePixelRatio||1);
+let dragId=-1, frozen=false, alpha=1, rafId=null;
+
+const sim = {
+  wake(){ alpha=Math.max(alpha,.5); if(!rafId) loop(); }
+};
+
+function fitCanvas(){
+  const r=canvas.getBoundingClientRect();
+  W=r.width; H=r.height||460;
+  canvas.width=W*DPR; canvas.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+function syncNodes(){
+  const n=state.n;
+  const old=nodes; nodes=[];
+  for(let i=0;i<n;i++){
+    const prev=old[i];
+    nodes.push(prev || {
+      x:W/2+Math.cos(i/n*6.283)*120+(Math.random()*8-4),
+      y:H/2+Math.sin(i/n*6.283)*120+(Math.random()*8-4),
+      vx:0,vy:0
+    });
+  }
+  alpha=1;
+}
+function recenter(){
+  const n=state.n;
+  for(let i=0;i<n;i++){ nodes[i].x=W/2+Math.cos(i/n*6.283)*Math.min(W,H)*0.32;
+                        nodes[i].y=H/2+Math.sin(i/n*6.283)*Math.min(W,H)*0.32;
+                        nodes[i].vx=nodes[i].vy=0; }
+  alpha=1; sim.wake();
+}
+function step(){
+  const n=state.n, M=state.M;
+  const {deg}=degrees(M,state.directed);
+  // repulsion
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+    let dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+    let d2=dx*dx+dy*dy||0.01, d=Math.sqrt(d2);
+    const f=2600/d2; const fx=dx/d*f, fy=dy/d*f;
+    nodes[i].vx+=fx; nodes[i].vy+=fy; nodes[j].vx-=fx; nodes[j].vy-=fy;
+  }
+  // springs
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){ if(i>=j)continue;
+    if(M[i][j]||M[j][i]){
+      let dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y;
+      let d=Math.sqrt(dx*dx+dy*dy)||0.01; const rest=92;
+      const f=(d-rest)*0.018; const fx=dx/d*f, fy=dy/d*f;
+      nodes[i].vx+=fx; nodes[i].vy+=fy; nodes[j].vx-=fx; nodes[j].vy-=fy;
+    }
+  }
+  // centering + integrate
+  for(let i=0;i<n;i++){
+    nodes[i].vx+=(W/2-nodes[i].x)*0.0015;
+    nodes[i].vy+=(H/2-nodes[i].y)*0.0015;
+    if(i===dragId) continue;
+    nodes[i].vx*=0.86; nodes[i].vy*=0.86;
+    nodes[i].x+=nodes[i].vx*alpha; nodes[i].y+=nodes[i].vy*alpha;
+    const R=nodeR(deg[i]);
+    nodes[i].x=Math.max(R+6,Math.min(W-R-6,nodes[i].x));
+    nodes[i].y=Math.max(R+6,Math.min(H-R-6,nodes[i].y));
+  }
+  alpha*=0.985; if(alpha<0.02) alpha=0.02;
+}
+function nodeR(d){ return 12+Math.min(14,d*2.4); }
+
+function draw(){
+  const n=state.n, M=state.M, dir=state.directed;
+  const {deg}=degrees(M,dir);
+  const {comp}=components(M);
+  ctx.clearRect(0,0,W,H);
+
+  // edges
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){
+    if(i===j){ if(M[i][i]) drawSelf(nodes[i],deg[i]); continue; }
+    if(!M[i][j]) continue;
+    if(!dir && j<i && M[j][i]) continue;        // undirected: draw once
+    const a=nodes[i], b=nodes[j];
+    const key=i+"-"+j, keyR=j+"-"+i;
+    const onPath = pathEdges.has(key)||pathEdges.has(keyR);
+    const spot = hoverNode===-1 || hoverNode===i || hoverNode===j ||
+                 (hoverCell && hoverCell.i===i && hoverCell.j===j);
+    drawEdge(a,b,deg[i],deg[j],dir, dir? M[j][i]===1 : true, onPath, spot,
+             (hoverCell&&((hoverCell.i===i&&hoverCell.j===j)||(!dir&&hoverCell.i===j&&hoverCell.j===i))));
+  }
+  // nodes
+  for(let i=0;i<n;i++){
+    const spot = hoverNode===-1 || hoverNode===i || (M[hoverNode]&&(M[hoverNode][i]||M[i][hoverNode]));
+    drawNode(i,deg[i],CL_COLORS[comp[i]%CL_COLORS.length],spot);
+  }
+}
+function drawEdge(a,b,di,dj,dir,mutual,onPath,spot,cellHi){
+  ctx.save();
+  let col = onPath?"#E7B53C": cellHi?"#bff3e7":"#4d6072";
+  ctx.strokeStyle=col; ctx.globalAlpha = spot? (onPath||cellHi?1:.6):.12;
+  ctx.lineWidth = onPath?2.6: cellHi?2.4: 1.4;
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  if(dir){
+    const R=nodeR(dj); const ang=Math.atan2(b.y-a.y,b.x-a.x);
+    const ex=b.x-Math.cos(ang)*(R+2), ey=b.y-Math.sin(ang)*(R+2), s=7;
+    ctx.fillStyle=col; ctx.beginPath();
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-Math.cos(ang-0.4)*s,ey-Math.sin(ang-0.4)*s);
+    ctx.lineTo(ex-Math.cos(ang+0.4)*s,ey-Math.sin(ang+0.4)*s);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawSelf(p,d){
+  ctx.save(); const R=nodeR(d);
+  ctx.strokeStyle="#E7B53C"; ctx.globalAlpha=hoverNode===-1?.8:.85; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.arc(p.x, p.y-R-7, 8, 0.5, 5.6); ctx.stroke();
+  ctx.restore();
+}
+function drawNode(i,d,col,spot){
+  const p=nodes[i], R=nodeR(d);
+  ctx.save();
+  ctx.globalAlpha = spot?1:.28;
+  // glow
+  if(hoverNode===i){ ctx.shadowColor=col; ctx.shadowBlur=22; }
+  ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.2832);
+  const g=ctx.createRadialGradient(p.x-R*.3,p.y-R*.3,1,p.x,p.y,R);
+  g.addColorStop(0, mix(col,"#ffffff",.25)); g.addColorStop(1, col);
+  ctx.fillStyle=g; ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.lineWidth=2; ctx.strokeStyle="#0E1219"; ctx.stroke();
+  // label
+  ctx.globalAlpha = spot?1:.4;
+  ctx.fillStyle="#0E1219"; ctx.font="600 11px 'IBM Plex Mono',monospace";
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  const lab=nm(i); ctx.fillText(lab.length>4?lab.slice(0,4):lab, p.x, p.y);
+  ctx.restore();
+}
+function mix(a,b,t){
+  const pa=hx(a),pb=hx(b);
+  return `rgb(${Math.round(pa[0]+(pb[0]-pa[0])*t)},${Math.round(pa[1]+(pb[1]-pa[1])*t)},${Math.round(pa[2]+(pb[2]-pa[2])*t)})`;
+}
+function hx(h){ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+
+function loop(){
+  if(!frozen) step();
+  draw();
+  if(alpha>0.025 && !frozen){ rafId=requestAnimationFrame(loop); }
+  else { draw(); rafId=null; }
+}
+
+/* ---- canvas interaction ---- */
+function nodeAt(x,y){
+  const {deg}=degrees(state.M,state.directed);
+  for(let i=state.n-1;i>=0;i--){ const R=nodeR(deg[i]);
+    if((x-nodes[i].x)**2+(y-nodes[i].y)**2<=R*R) return i; }
+  return -1;
+}
+function relPos(e){ const r=canvas.getBoundingClientRect(); const t=e.touches?e.touches[0]:e; return {x:t.clientX-r.left,y:t.clientY-r.top}; }
+canvas.addEventListener("mousemove",e=>{
+  const {x,y}=relPos(e);
+  if(dragId>=0){ nodes[dragId].x=x; nodes[dragId].y=y; nodes[dragId].vx=nodes[dragId].vy=0; sim.wake(); return; }
+  const id=nodeAt(x,y); canvas.style.cursor=id>=0?"grab":"default";
+  if(id!==hoverNode){ hoverNode=id; markHover(); draw(); }
+});
+canvas.addEventListener("mousedown",e=>{ const {x,y}=relPos(e); const id=nodeAt(x,y); if(id>=0){ dragId=id; canvas.style.cursor="grabbing"; sim.wake(); } });
+window.addEventListener("mouseup",()=>{ if(dragId>=0){ dragId=-1; canvas.style.cursor="grab"; } });
+canvas.addEventListener("mouseleave",()=>{ if(hoverNode!==-1){ hoverNode=-1; markHover(); draw(); } });
+canvas.addEventListener("touchstart",e=>{ const {x,y}=relPos(e); const id=nodeAt(x,y); if(id>=0){ dragId=id; hoverNode=id; markHover(); e.preventDefault(); sim.wake(); } },{passive:false});
+canvas.addEventListener("touchmove",e=>{ if(dragId>=0){ const {x,y}=relPos(e); nodes[dragId].x=x; nodes[dragId].y=y; nodes[dragId].vx=nodes[dragId].vy=0; e.preventDefault(); sim.wake(); } },{passive:false});
+canvas.addEventListener("touchend",()=>{ dragId=-1; });
+
+function markHover(){
+  // light-touch: re-mark matrix headers/cells without full rebuild
+  document.querySelectorAll(".hdr").forEach(h=>h.classList.toggle("hot", +h.dataset.idx===hoverNode));
+  document.querySelectorAll(".cell").forEach(c=>{
+    const i=+c.dataset.i, j=+c.dataset.j;
+    c.classList.toggle("rowhot", hoverNode===i);
+    c.classList.toggle("colhot", hoverNode===j);
+  });
+}
+
+/* ============================================================
+   REFRESH ORCHESTRATION
+============================================================ */
+function refresh(){
+  renderMatrix(); renderProps(); renderStats(); renderDegrees(); renderClusters();
+  refreshPathSelects();
+  $("#ncount").textContent=state.n;
+  sim.wake();
+}
+function refreshLight(){ renderMatrix(); renderClusters(); renderDegrees(); refreshPathSelects(); sim.wake(); }
+function refreshPathSelects(){
+  ["#pSrc","#pDst"].forEach((sel,si)=>{
+    const el=$(sel), cur=el.value;
+    el.innerHTML=state.names.map((nme,i)=>`<option value="${i}">${nme}</option>`).join("");
+    if(cur!==""&&+cur<state.n) el.value=cur; else el.value = si===0?0:Math.min(state.n-1,1);
+  });
+}
+
+/* ============================================================
+   CONTROLS
+============================================================ */
+$("#dirSeg").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle("on",x===b));
+  state.directed = b.dataset.dir==="directed";
+  if(!state.directed){ for(let i=0;i<state.n;i++)for(let j=0;j<i;j++){ const v=state.M[i][j]||state.M[j][i]?1:0; state.M[i][j]=state.M[j][i]=v; } }
+  $("#mxSub").textContent = state.directed
+    ? "Directed: R[i][j] is the tie from row i → column j"
+    : "Click a cell to toggle a connection · double-click a label to rename";
+  pathEdges.clear(); $("#pathOut").textContent="";
+  save(); refresh();
+});
+$("#inc").addEventListener("click",()=>{ if(state.n<12){ ensureSize(state.n+1); syncNodes(); pathEdges.clear(); save(); refresh(); } });
+$("#dec").addEventListener("click",()=>{ if(state.n>2){ ensureSize(state.n-1); syncNodes(); pathEdges.clear(); save(); refresh(); } });
+
+$("#viewToggle").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle("on",x===b));
+  view=b.dataset.view;
+  $("#mxSub").textContent = view==="heat"
+    ? "Heatmap is read-only — hotter cells = ties between higher-degree users"
+    : (state.directed? "Directed: R[i][j] is the tie from row i → column j":"Click a cell to toggle a connection · double-click a label to rename");
+  renderMatrix();
+});
+$("#closureBtn").addEventListener("click",e=>{ showClosure=!showClosure; e.currentTarget.classList.toggle("on",showClosure); renderMatrix(); toast(showClosure?"Transitive closure R* overlaid":"Closure hidden"); });
+
+$("#freezeBtn").addEventListener("click",e=>{ frozen=!frozen; e.currentTarget.classList.toggle("on",!frozen); if(!frozen) sim.wake(); toast(frozen?"Layout frozen":"Layout resumed"); });
+$("#recenterBtn").addEventListener("click",recenter);
+
+/* path finder */
+$("#pathBtn").addEventListener("click",()=>{
+  const s=+$("#pSrc").value, t=+$("#pDst").value;
+  if(s===t){ $("#pathOut").innerHTML="Pick two different users."; return; }
+  const path=bfsPath(state.M,s,t,state.directed);
+  pathEdges.clear();
+  if(!path){ $("#pathOut").innerHTML=`No path from <b>${nm(s)}</b> to <b>${nm(t)}</b>.`; draw(); return; }
+  for(let k=0;k<path.length-1;k++) pathEdges.add(path[k]+"-"+path[k+1]);
+  $("#pathOut").innerHTML = path.map(nm).join(" → ") + ` &nbsp;·&nbsp; <b>${path.length-1} hop${path.length-1>1?"s":""}</b>`;
+  sim.wake();
+});
+
+/* samples */
+const SAMPLES={
+  friends:{dir:false,names:["Ava","Ben","Cara","Dia","Eli","Fox"],edges:[[0,1],[0,2],[1,2],[2,3],[3,4],[4,5],[3,5]]},
+  followers:{dir:true,names:["Ava","Ben","Cara","Dia","Eli","Fox"],edges:[[0,1],[1,2],[2,0],[3,1],[4,3],[5,4],[1,5]]},
+  study:{dir:true,names:["A","B","C","D","E"],edges:[[0,1],[1,2],[0,2],[2,3],[1,3],[0,3],[3,4],[2,4],[1,4],[0,4]]},
+  equiv:{dir:false,names:["A1","A2","B1","B2","C1","C2"],edges:[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[0,1],[2,3],[4,5]]},
+  islands:{dir:false,names:["P","Q","R","S","T","U","Z"],edges:[[0,1],[1,2],[0,2],[3,4],[4,5],[3,5]]},
+};
+$("#sample").addEventListener("change",e=>{
+  const key=e.target.value; if(!key)return;
+  const s=SAMPLES[key]; const n=s.names.length;
+  state.directed=s.dir; ensureSize(n); state.names=s.names.slice();
+  state.M=zeros(n);
+  s.edges.forEach(([i,j])=>{ state.M[i][j]=1; if(!s.dir) state.M[j][i]=1; });
+  [...$("#dirSeg").children].forEach(x=>x.classList.toggle("on",x.dataset.dir===(s.dir?"directed":"undirected")));
+  pathEdges.clear(); $("#pathOut").textContent=""; syncNodes(); recenter(); save(); refresh();
+  e.target.value=""; toast("Loaded: "+key);
+});
+
+$("#randomBtn").addEventListener("click",()=>{
+  const n=state.n; state.M=zeros(n); const p=0.32;
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){ if(i===j)continue;
+    if(state.directed){ if(Math.random()<p) state.M[i][j]=1; }
+    else if(j>i && Math.random()<p){ state.M[i][j]=state.M[j][i]=1; } }
+  pathEdges.clear(); recenter(); save(); refresh(); toast("Random network generated");
+});
+$("#clearBtn").addEventListener("click",()=>{ state.M=zeros(state.n); pathEdges.clear(); $("#pathOut").textContent=""; save(); refresh(); toast("Matrix cleared"); });
+
+/* export / import */
+function download(name,data,type){ const b=new Blob([data],{type}); const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),500); }
+$("#expJson").addEventListener("click",()=>{ download("relational-matrix.json",JSON.stringify({n:state.n,directed:state.directed,names:state.names,M:state.M},null,2),"application/json"); toast("Project saved"); });
+$("#expCsv").addEventListener("click",()=>{
+  const head=[""].concat(state.names).join(",");
+  const rows=state.M.map((r,i)=>[state.names[i]].concat(r).join(","));
+  download("relation-matrix.csv",[head,...rows].join("\n"),"text/csv"); toast("Matrix exported");
+});
+$("#expPng").addEventListener("click",()=>{
+  const out=document.createElement("canvas"); out.width=canvas.width; out.height=canvas.height;
+  const c=out.getContext("2d"); c.fillStyle="#0E1219"; c.fillRect(0,0,out.width,out.height); c.drawImage(canvas,0,0);
+  out.toBlob(b=>{ const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download="network-graph.png"; a.click(); setTimeout(()=>URL.revokeObjectURL(u),500); }); toast("Graph image saved");
+});
+$("#impBtn").addEventListener("click",()=>$("#impFile").click());
+$("#impFile").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f)return; const rd=new FileReader();
+  rd.onload=()=>{ try{
+    const d=JSON.parse(rd.result);
+    const n=d.n||(d.M?d.M.length:6);
+    state.directed=!!d.directed; ensureSize(n);
+    if(Array.isArray(d.names)) state.names=defaultNames(n).map((x,i)=>d.names[i]||x);
+    if(Array.isArray(d.M)) for(let i=0;i<n;i++)for(let j=0;j<n;j++) state.M[i][j]=(d.M[i]&&d.M[i][j])?1:0;
+    [...$("#dirSeg").children].forEach(x=>x.classList.toggle("on",x.dataset.dir===(state.directed?"directed":"undirected")));
+    pathEdges.clear(); syncNodes(); recenter(); save(); refresh(); toast("Project imported");
+  }catch(err){ toast("Couldn't read that file"); } };
+  rd.readAsText(f); e.target.value="";
+});
+
+/* persistence */
+function save(){ try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }catch(e){} }
+function load(){ try{ const s=localStorage.getItem(LS_KEY); if(s){ const d=JSON.parse(s);
+  if(d&&d.M&&d.M.length){ state.n=d.M.length; state.directed=!!d.directed; state.M=d.M; state.names=d.names||defaultNames(state.n); return true; } } }catch(e){} return false; }
+
+/* toast */
+let toastT=null;
+function toast(msg){ const t=$("#toast"); t.innerHTML=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1900); }
+
+/* ============================================================
+   BOOT
+============================================================ */
+function boot(){
+  if(!load()){
+    const s=SAMPLES.followers; state.directed=true; ensureSize(6); state.names=s.names.slice(); state.M=zeros(6);
+    s.edges.forEach(([i,j])=>{ state.M[i][j]=1; });
+    [...$("#dirSeg").children].forEach(x=>x.classList.toggle("on",x.dataset.dir==="directed"));
+  } else {
+    [...$("#dirSeg").children].forEach(x=>x.classList.toggle("on",x.dataset.dir===(state.directed?"directed":"undirected")));
+  }
+  $("#mxSub").textContent = state.directed
+    ? "Directed: R[i][j] is the tie from row i → column j"
+    : "Click a cell to toggle a connection · double-click a label to rename";
+  fitCanvas(); syncNodes(); recenter(); refresh(); loop();
+}
+let rt=null;
+window.addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(()=>{ fitCanvas(); recenter(); },180); });
+if(window.matchMedia("(prefers-reduced-motion:reduce)").matches){ frozen=true; $("#freezeBtn").classList.remove("on"); }
+boot();
+</script>
+</body>
+</html>
